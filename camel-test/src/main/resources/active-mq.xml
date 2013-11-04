@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:amq="http://activemq.apache.org/schema/core"
+       xmlns:camel="http://camel.apache.org/schema/spring"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd
+                           http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
+
+	<amq:broker brokerName="jmsBroker" persistent="true" start="true" deleteAllMessagesOnStartup="true" useJmx="true">
+		<amq:managementContext>
+			<amq:managementContext createConnector="false"/>
+		</amq:managementContext>
+		<amq:systemUsage>
+			<amq:systemUsage>
+				<amq:memoryUsage>
+					<amq:memoryUsage limit="64mb"/>
+				</amq:memoryUsage>
+				<amq:storeUsage>
+					<amq:storeUsage limit="1024mb"/>
+				</amq:storeUsage>
+				<amq:tempUsage>
+					<amq:tempUsage limit="128mb"/>
+				</amq:tempUsage>
+			</amq:systemUsage>
+		</amq:systemUsage>
+		<amq:transportConnectors>
+			<amq:transportConnector uri="vm://jmsBroker"/>
+		</amq:transportConnectors>
+	</amq:broker>
+
+	<camel:errorHandler id="loggingErrorHandler" type="LoggingErrorHandler" logName="org.apache.activemq.spring" level="DEBUG"/>
+
+	<camel:camelContext id="camelContext" errorHandlerRef="loggingErrorHandler">
+		<camel:route id="testRoute" inheritErrorHandler="true">
+			<camel:description>Test Route</camel:description>
+			<camel:from uri="activemq:queue:test-from"/>
+			<camel:multicast parallelProcessing="true" stopOnException="true">
+				<camel:to uri="activemq:queue:test-to-1"/>
+				<camel:filter>
+					<camel:simple>${header.type} == 'test2'</camel:simple>
+					<camel:to uri="activemq:queue:test-to-2"/>
+				</camel:filter>
+			</camel:multicast>
+		</camel:route>
+	</camel:camelContext>
+
+	<amq:queue id="testFrom" physicalName="test-from"/>
+	<amq:queue id="testTo1" physicalName="test-to-1"/>
+	<amq:queue id="testTo2" physicalName="test-to-2"/>
+
+	<amq:connectionFactory id="amqConnectionFactory" brokerURL="vm://jmsBroker"/>
+
+	<bean id="jmsConnectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory" p:targetConnectionFactory-ref="amqConnectionFactory" p:sessionCacheSize="3" destroy-method="destroy"/>
+
+	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+		<property name="connectionFactory" ref="jmsConnectionFactory"/>
+		<property name="defaultDestination" ref="testFrom"/>
+	</bean>
+
+	<bean id="messageSender" class="test.activemq.camel.MessageSender" init-method="init" depends-on="camelContext">
+		<constructor-arg ref="jmsTemplate"/>
+	</bean>
+
+	<bean id="jmsContainer1" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="jmsConnectionFactory"/>
+		<property name="destination" ref="testTo1"/>
+		<property name="messageListener">
+			<bean class="test.activemq.camel.MessageReceiver">
+				<property name="name" value="Listener 1"/>
+			</bean>
+		</property>
+		<property name="sessionTransacted" value="true"/>
+	</bean>
+
+	<bean id="jmsContainer2" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="jmsConnectionFactory"/>
+		<property name="destination" ref="testTo2"/>
+		<property name="messageListener">
+			<bean class="test.activemq.camel.MessageReceiver">
+				<property name="name" value="Listener 2"/>
+			</bean>
+		</property>
+		<property name="sessionTransacted" value="true"/>
+	</bean>
+
+</beans>
