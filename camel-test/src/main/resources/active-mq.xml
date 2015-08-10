@@ -9,9 +9,6 @@
                            http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
 
 	<amq:broker brokerName="jmsBroker" persistent="true" start="true" deleteAllMessagesOnStartup="true" useJmx="true">
-		<amq:managementContext>
-			<amq:managementContext createConnector="false"/>
-		</amq:managementContext>
 		<amq:systemUsage>
 			<amq:systemUsage>
 				<amq:memoryUsage>
@@ -28,19 +25,38 @@
 		<amq:transportConnectors>
 			<amq:transportConnector uri="vm://jmsBroker"/>
 		</amq:transportConnectors>
+		<amq:managementContext>
+			<amq:managementContext createConnector="true" connectorPort="1099"/>
+		</amq:managementContext>
+		<amq:persistenceAdapter>
+			<amq:kahaDB directory="M:\activemq-data"/>
+		</amq:persistenceAdapter>
 	</amq:broker>
 
-	<camel:errorHandler id="loggingErrorHandler" type="LoggingErrorHandler" logName="org.apache.activemq.spring" level="DEBUG"/>
+	<camel:errorHandler id="loggingErrorHandler" type="LoggingErrorHandler" logName="org.apache.activemq.spring" level="ERROR"/>
 
 	<camel:camelContext id="camelContext" streamCache="true" errorHandlerRef="loggingErrorHandler">
 		<camel:route id="testRoute" inheritErrorHandler="true">
 			<camel:description>Test Route</camel:description>
 			<camel:from uri="activemq:queue:test-from"/>
-			<camel:multicast parallelProcessing="true" streaming="true" stopOnException="true">
+			<camel:multicast parallelProcessing="true" streaming="true">
 				<camel:to uri="activemq:queue:test-to-1"/>
+				<camel:to uri="activemq:queue:test-to-2"/>
+				<camel:filter>
+					<camel:simple>${header.type} == 'test1'</camel:simple>
+					<camel:to uri="activemq:queue:test-to-3"/>
+				</camel:filter>
 				<camel:filter>
 					<camel:simple>${header.type} == 'test2'</camel:simple>
-					<camel:to uri="activemq:queue:test-to-2"/>
+					<camel:to uri="activemq:queue:test-to-4"/>
+				</camel:filter>
+				<camel:filter>
+					<camel:simple>${header.type} == 'test1'</camel:simple>
+					<camel:to uri="activemq:queue:test-to-5"/>
+				</camel:filter>
+				<camel:filter>
+					<camel:simple>${header.type} == 'test2'</camel:simple>
+					<camel:to uri="activemq:queue:test-to-6"/>
 				</camel:filter>
 			</camel:multicast>
 		</camel:route>
@@ -49,6 +65,10 @@
 	<amq:queue id="testFrom" physicalName="test-from"/>
 	<amq:queue id="testTo1" physicalName="test-to-1"/>
 	<amq:queue id="testTo2" physicalName="test-to-2"/>
+	<amq:queue id="testTo3" physicalName="test-to-3"/>
+	<amq:queue id="testTo4" physicalName="test-to-4"/>
+	<amq:queue id="testTo5" physicalName="test-to-5"/>
+	<amq:queue id="testTo6" physicalName="test-to-6"/>
 
 	<amq:connectionFactory id="amqConnectionFactory" brokerURL="vm://jmsBroker"/>
 
@@ -68,7 +88,9 @@
 		<property name="destination" ref="testTo1"/>
 		<property name="messageListener">
 			<bean class="test.activemq.camel.MessageReceiver">
+				<property name="sender" ref="messageSender"/>
 				<property name="name" value="Listener 1"/>
+				<property name="receiveRatio" value="2"/>
 			</bean>
 		</property>
 		<property name="sessionTransacted" value="true"/>
@@ -79,7 +101,57 @@
 		<property name="destination" ref="testTo2"/>
 		<property name="messageListener">
 			<bean class="test.activemq.camel.MessageReceiver">
+				<property name="sender" ref="messageSender"/>
 				<property name="name" value="Listener 2"/>
+				<property name="receiveRatio" value="2"/>
+			</bean>
+		</property>
+		<property name="sessionTransacted" value="true"/>
+	</bean>
+
+	<bean id="jmsContainer3" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="jmsConnectionFactory"/>
+		<property name="destination" ref="testTo3"/>
+		<property name="messageListener">
+			<bean class="test.activemq.camel.MessageReceiver">
+				<property name="sender" ref="messageSender"/>
+				<property name="name" value="Listener 3"/>
+			</bean>
+		</property>
+		<property name="sessionTransacted" value="true"/>
+	</bean>
+
+	<bean id="jmsContainer4" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="jmsConnectionFactory"/>
+		<property name="destination" ref="testTo4"/>
+		<property name="messageListener">
+			<bean class="test.activemq.camel.MessageReceiver">
+				<property name="sender" ref="messageSender"/>
+				<property name="name" value="Listener 4"/>
+			</bean>
+		</property>
+		<property name="sessionTransacted" value="true"/>
+	</bean>
+
+	<bean id="jmsContainer5" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="jmsConnectionFactory"/>
+		<property name="destination" ref="testTo5"/>
+		<property name="messageListener">
+			<bean class="test.activemq.camel.MessageReceiver">
+				<property name="sender" ref="messageSender"/>
+				<property name="name" value="Listener 5"/>
+			</bean>
+		</property>
+		<property name="sessionTransacted" value="true"/>
+	</bean>
+
+	<bean id="jmsContainer6" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+		<property name="connectionFactory" ref="jmsConnectionFactory"/>
+		<property name="destination" ref="testTo6"/>
+		<property name="messageListener">
+			<bean class="test.activemq.camel.MessageReceiver">
+				<property name="sender" ref="messageSender"/>
+				<property name="name" value="Listener 6"/>
 			</bean>
 		</property>
 		<property name="sessionTransacted" value="true"/>

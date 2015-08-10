@@ -9,6 +9,9 @@ public class MessageSender {
 
 	private final JmsTemplate jmsTemplate;
 
+	private static final int COUNT = 100;
+	private static final int STEP = 100;
+
 	private static final Logger LOGGER = LoggerFactory.getLogger(MessageSender.class);
 
 	public MessageSender(JmsTemplate jmsTemplate) {
@@ -16,8 +19,21 @@ public class MessageSender {
 	}
 
 	public void init() {
-		jmsTemplate.send(new TestMessageCreator("test1", "Test1"));
-		jmsTemplate.send(new TestMessageCreator("test2", "Test2"));
+		long t0 = System.currentTimeMillis();
+		for (int i = 1; i <= COUNT; i++) {
+			jmsTemplate.send(new TestMessageCreator("test1", "Test1"));
+			jmsTemplate.send(new TestMessageCreator("test2", "Test2"));
+			if (i % STEP == 0) {
+				int sent = i * 2;
+				long dt = System.currentTimeMillis() - t0;
+				System.out.printf("Sent: %d in %d ms (%.1f msg/s)%n", sent, dt, sent*1000.0/dt);
+			}
+		}
+		System.out.println("Sending finished.");
+	}
+
+	public int getSendCount() {
+		return COUNT;
 	}
 
 	private static class TestMessageCreator implements MessageCreator {
