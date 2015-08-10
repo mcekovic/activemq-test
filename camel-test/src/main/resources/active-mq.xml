@@ -32,11 +32,11 @@
 
 	<camel:errorHandler id="loggingErrorHandler" type="LoggingErrorHandler" logName="org.apache.activemq.spring" level="DEBUG"/>
 
-	<camel:camelContext id="camelContext" errorHandlerRef="loggingErrorHandler">
+	<camel:camelContext id="camelContext" streamCache="true" errorHandlerRef="loggingErrorHandler">
 		<camel:route id="testRoute" inheritErrorHandler="true">
 			<camel:description>Test Route</camel:description>
 			<camel:from uri="activemq:queue:test-from"/>
-			<camel:multicast parallelProcessing="true" stopOnException="true">
+			<camel:multicast parallelProcessing="true" streaming="true" stopOnException="true">
 				<camel:to uri="activemq:queue:test-to-1"/>
 				<camel:filter>
 					<camel:simple>${header.type} == 'test2'</camel:simple>
