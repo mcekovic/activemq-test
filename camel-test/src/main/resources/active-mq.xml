@@ -28,9 +28,25 @@
 		<amq:managementContext>
 			<amq:managementContext createConnector="true" connectorPort="1099"/>
 		</amq:managementContext>
-		<amq:persistenceAdapter>
-			<amq:kahaDB directory="M:\activemq-data"/>
-		</amq:persistenceAdapter>
+		<amq:destinationInterceptors>
+			<amq:virtualDestinationInterceptor>
+				<amq:virtualDestinations>
+					<amq:compositeQueue name="vtest-from">
+						<amq:forwardTo>
+							<amq:queue physicalName="test-to-1"/>
+							<amq:queue physicalName="test-to-2"/>
+							<amq:filteredDestination queue="test-to-3" selector="type = 'test1'"/>
+							<amq:filteredDestination queue="test-to-4" selector="type = 'test2'"/>
+							<amq:filteredDestination queue="test-to-5" selector="type = 'test1'"/>
+							<amq:filteredDestination queue="test-to-6" selector="type = 'test2'"/>
+						</amq:forwardTo>
+					</amq:compositeQueue>
+				</amq:virtualDestinations>
+			</amq:virtualDestinationInterceptor>
+		</amq:destinationInterceptors>
+		<!--<amq:persistenceAdapter>-->
+			<!--<amq:kahaDB directory="M:\activemq-data"/>-->
+		<!--</amq:persistenceAdapter>-->
 	</amq:broker>
 
 	<camel:errorHandler id="loggingErrorHandler" type="LoggingErrorHandler" logName="org.apache.activemq.spring" level="ERROR"/>
@@ -39,7 +55,7 @@
 		<camel:route id="testRoute" inheritErrorHandler="true">
 			<camel:description>Test Route</camel:description>
 			<camel:from uri="activemq:queue:test-from"/>
-			<camel:multicast parallelProcessing="true" streaming="true">
+			<!--<camel:multicast parallelProcessing="true" streaming="true">-->
 				<camel:to uri="activemq:queue:test-to-1"/>
 				<camel:to uri="activemq:queue:test-to-2"/>
 				<camel:filter>
@@ -58,11 +74,12 @@
 					<camel:simple>${header.type} == 'test2'</camel:simple>
 					<camel:to uri="activemq:queue:test-to-6"/>
 				</camel:filter>
-			</camel:multicast>
+			<!--</camel:multicast>-->
 		</camel:route>
 	</camel:camelContext>
 
 	<amq:queue id="testFrom" physicalName="test-from"/>
+	<amq:queue id="vtestFrom" physicalName="vtest-from"/>
 	<amq:queue id="testTo1" physicalName="test-to-1"/>
 	<amq:queue id="testTo2" physicalName="test-to-2"/>
 	<amq:queue id="testTo3" physicalName="test-to-3"/>
@@ -76,7 +93,8 @@
 
 	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
 		<property name="connectionFactory" ref="jmsConnectionFactory"/>
-		<property name="defaultDestination" ref="testFrom"/>
+		<property name="defaultDestination" ref="vtestFrom"/>
+		<property name="sessionTransacted" value="true"/>
 	</bean>
 
 	<bean id="messageSender" class="test.activemq.camel.MessageSender" init-method="init" depends-on="camelContext">

@@ -9,7 +9,7 @@ public class MessageSender {
 
 	private final JmsTemplate jmsTemplate;
 
-	private static final int COUNT = 100;
+	private static final int COUNT = 1000;
 	private static final int STEP = 100;
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(MessageSender.class);
