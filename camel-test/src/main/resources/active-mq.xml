@@ -27,14 +27,14 @@
 		</amq:systemUsage>
 		<amq:transportConnectors>
 			<amq:transportConnector name="openwire" uri="tcp://0.0.0.0:61616?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
-			<!--<amq:transportConnector uri="vm://jmsBroker"/>-->
+			<amq:transportConnector uri="vm://jmsBroker"/>
 		</amq:transportConnectors>
 		<amq:managementContext>
 			<amq:managementContext createConnector="true" connectorPort="1099"/>
 		</amq:managementContext>
-		<amq:destinationInterceptors>
-			<amq:virtualDestinationInterceptor>
-				<amq:virtualDestinations>
+		<!--<amq:destinationInterceptors>-->
+			<!--<amq:virtualDestinationInterceptor>-->
+				<!--<amq:virtualDestinations>-->
 					<!--<amq:compositeQueue id="vtest-from" name="vtest-from" concurrentSend="true">-->
 						<!--<amq:forwardTo>-->
 							<!--<amq:queue physicalName="test-to-1"/>-->
@@ -46,13 +46,13 @@
 						<!--</amq:forwardTo>-->
 					<!--</amq:compositeQueue>-->
 					<!--<amq:virtualTopic name="VirtualTopic.>" prefix="Consumer.*.VirtualTopic." selectorAware="true"/>-->
-					<amq:virtualTopic name="VirtualTopic.test-from" selectorAware="true"/>
-				</amq:virtualDestinations>
-			</amq:virtualDestinationInterceptor>
-		</amq:destinationInterceptors>
-		<amq:destinations>
-			<amq:queue physicalName="Consumer.pera.VirtualTopic.test-from"/>
-		</amq:destinations>
+					<!--<amq:virtualTopic name="VirtualTopic.test-from" selectorAware="true"/>-->
+				<!--</amq:virtualDestinations>-->
+			<!--</amq:virtualDestinationInterceptor>-->
+		<!--</amq:destinationInterceptors>-->
+		<!--<amq:destinations>-->
+			<!--<amq:queue physicalName="Consumer.pera.VirtualTopic.test-from"/>-->
+		<!--</amq:destinations>-->
 	</amq:broker>
 
 	<!--<amq:broker brokerId="jmsBroker2" brokerName="jmsBroker2" persistent="true" start="true" deleteAllMessagesOnStartup="true" useJmx="true">-->
@@ -96,6 +96,17 @@
 			<!--</amq:virtualDestinationInterceptor>-->
 		<!--</amq:destinationInterceptors>-->
 	<!--</amq:broker>-->
+	<bean id="activemq" class="org.apache.activemq.camel.component.ActiveMQComponent">
+		<property name="connectionFactory">
+			<bean class="org.apache.activemq.pool.PooledConnectionFactory" destroy-method="stop">
+				<property name="connectionFactory">
+					<bean class="org.apache.activemq.ActiveMQConnectionFactory">
+						<property name="brokerURL" value="vm://localhost?create=false"/>
+					</bean>
+				</property>
+			</bean>
+		</property>
+	</bean>
 
 	<camel:errorHandler id="loggingErrorHandler" type="LoggingErrorHandler" logName="org.apache.activemq.spring" level="ERROR"/>
 
@@ -127,29 +138,30 @@
 	</camel:camelContext>
 
 	<amq:queue id="testFrom" physicalName="test-from"/>
-	<amq:queue id="vtestFrom" physicalName="vtest-from"/>
+	<!--<amq:queue id="vtestFrom" physicalName="vtest-from"/>-->
 	<amq:queue id="testTo1" physicalName="test-to-1"/>
 	<amq:queue id="testTo2" physicalName="test-to-2"/>
 	<amq:queue id="testTo3" physicalName="test-to-3"/>
 	<amq:queue id="testTo4" physicalName="test-to-4"/>
 	<amq:queue id="testTo5" physicalName="test-to-5"/>
 	<amq:queue id="testTo6" physicalName="test-to-6"/>
+	<!--<amq:topic id="vtTestFrom" physicalName="test-from"/>-->
+	<!--<amq:queue id="cqTestFrom" physicalName="Consumer.pera.test-from"/>-->
 
-	<amq:connectionFactory id="amqConnectionFactory" brokerURL="tcp://localhost:61616"/>
+	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="tcp://localhost:61616" />-->
 	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="tcp://localhost:62626"/>-->
 	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="failover:(tcp://localhost:61616,tcp://localhost:62626)?randomize=false"/>-->
-	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="vm://jmsBroker?create=false"/>-->
+	<amq:connectionFactory id="amqConnectionFactory" brokerURL="vm://jmsBroker?create=false"/>
 
-	<bean id="jmsConnectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory" p:targetConnectionFactory-ref="amqConnectionFactory" p:sessionCacheSize="10" destroy-method="destroy"/>
+	<bean id="jmsConnectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory" p:targetConnectionFactory-ref="amqConnectionFactory" p:sessionCacheSize="10" destroy-method="destroy" depends-on="amqConnectionFactory"/>
 
 	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
 		<property name="connectionFactory" ref="jmsConnectionFactory"/>
-		<!--<property name="defaultDestination" ref="vtestFrom"/>-->
-		<property name="defaultDestinationName" value="VirtualTopic.test-from"/>
+		<property name="defaultDestination" ref="testFrom"/>
 		<property name="sessionTransacted" value="true"/>
 	</bean>
 
-	<bean id="messageSender" class="test.activemq.camel.MessageSender" init-method="init" depends-on="camelContext">
+	<bean id="messageSender" class="test.activemq.camel.MessageSender" init-method="init">
 		<constructor-arg ref="jmsTemplate"/>
 	</bean>
 
@@ -159,8 +171,7 @@
 	</bean>
 
 	<bean id="jmsContainer1" parent="jmsContainer">
-		<!--<property name="destination" ref="testTo1"/>-->
-		<property name="destinationName" value="Consumer.pera.VirtualTopic.test-from"/>
+		<property name="destination" ref="testTo1"/>
 		<property name="messageListener">
 			<bean class="test.activemq.camel.MessageReceiver">
 				<property name="sender" ref="messageSender"/>
