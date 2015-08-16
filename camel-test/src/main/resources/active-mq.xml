@@ -29,6 +29,9 @@
 			<amq:transportConnector name="openwire" uri="tcp://0.0.0.0:61616?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
 			<amq:transportConnector uri="vm://jmsBroker"/>
 		</amq:transportConnectors>
+		<amq:persistenceAdapter>
+			<amq:kahaDB directory="${activemq.data}/kahadb" enableJournalDiskSyncs="true" preallocationStrategy="zeros"/>
+		</amq:persistenceAdapter>
 		<amq:managementContext>
 			<amq:managementContext createConnector="true" connectorPort="1099"/>
 		</amq:managementContext>
@@ -101,7 +104,7 @@
 			<bean class="org.apache.activemq.pool.PooledConnectionFactory" destroy-method="stop">
 				<property name="connectionFactory">
 					<bean class="org.apache.activemq.ActiveMQConnectionFactory">
-						<property name="brokerURL" value="vm://localhost?create=false"/>
+						<property name="brokerURL" value="vm://jmsBroker?create=false"/>
 					</bean>
 				</property>
 			</bean>
