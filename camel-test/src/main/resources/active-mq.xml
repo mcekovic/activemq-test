@@ -38,7 +38,7 @@
 		<!--<amq:destinationInterceptors>-->
 			<!--<amq:virtualDestinationInterceptor>-->
 				<!--<amq:virtualDestinations>-->
-					<!--<amq:compositeQueue id="vtest-from" name="vtest-from" concurrentSend="true">-->
+					<!--<amq:compositeQueue id="test-from" name="test-from" concurrentSend="true">-->
 						<!--<amq:forwardTo>-->
 							<!--<amq:queue physicalName="test-to-1"/>-->
 							<!--<amq:queue physicalName="test-to-2"/>-->
@@ -102,6 +102,7 @@
 	<bean id="activemq" class="org.apache.activemq.camel.component.ActiveMQComponent">
 		<property name="connectionFactory">
 			<bean class="org.apache.activemq.pool.PooledConnectionFactory" destroy-method="stop">
+				<property name="maxConnections" value="20" />
 				<property name="connectionFactory">
 					<bean class="org.apache.activemq.ActiveMQConnectionFactory">
 						<property name="brokerURL" value="vm://jmsBroker?create=false"/>
@@ -141,15 +142,12 @@
 	</camel:camelContext>
 
 	<amq:queue id="testFrom" physicalName="test-from"/>
-	<!--<amq:queue id="vtestFrom" physicalName="vtest-from"/>-->
 	<amq:queue id="testTo1" physicalName="test-to-1"/>
 	<amq:queue id="testTo2" physicalName="test-to-2"/>
 	<amq:queue id="testTo3" physicalName="test-to-3"/>
 	<amq:queue id="testTo4" physicalName="test-to-4"/>
 	<amq:queue id="testTo5" physicalName="test-to-5"/>
 	<amq:queue id="testTo6" physicalName="test-to-6"/>
-	<!--<amq:topic id="vtTestFrom" physicalName="test-from"/>-->
-	<!--<amq:queue id="cqTestFrom" physicalName="Consumer.pera.test-from"/>-->
 
 	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="tcp://localhost:61616" />-->
 	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="tcp://localhost:62626"/>-->
