@@ -30,7 +30,8 @@
 			<amq:transportConnector uri="vm://jmsBroker"/>
 		</amq:transportConnectors>
 		<amq:persistenceAdapter>
-			<amq:kahaDB directory="${activemq.data}/kahadb" enableJournalDiskSyncs="true" preallocationStrategy="zeros"/>
+			<amq:kahaDB directory="activemq-data/kahadb" enableJournalDiskSyncs="true" preallocationStrategy="zeros"/>
+			<!--<amq:levelDB directory="activemq-data/leveldb"/>-->
 		</amq:persistenceAdapter>
 		<amq:managementContext>
 			<amq:managementContext createConnector="true" connectorPort="1099"/>
@@ -99,6 +100,7 @@
 			<!--</amq:virtualDestinationInterceptor>-->
 		<!--</amq:destinationInterceptors>-->
 	<!--</amq:broker>-->
+
 	<bean id="activemq" class="org.apache.activemq.camel.component.ActiveMQComponent">
 		<property name="connectionFactory">
 			<bean class="org.apache.activemq.pool.PooledConnectionFactory" destroy-method="stop">

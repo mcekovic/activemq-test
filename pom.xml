@@ -55,6 +55,11 @@
 				<version>${activemq.version}</version>
 			</dependency>
 			<dependency>
+				<groupId>org.apache.activemq</groupId>
+				<artifactId>activemq-leveldb-store</artifactId>
+				<version>${activemq.version}</version>
+			</dependency>
+			<dependency>
 				<groupId>org.apache.camel</groupId>
 				<artifactId>camel-spring</artifactId>
 				<version>${camel.version}</version>
