@@ -18,7 +18,7 @@ public class MessageSender {
 		this.jmsTemplate = jmsTemplate;
 	}
 
-	public void init() {
+	public void send() {
 		long t0 = System.currentTimeMillis();
 		for (int i = 1; i <= COUNT; i++) {
 			jmsTemplate.send(new TestMessageCreator("test1", "Test1"));

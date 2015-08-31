@@ -182,7 +182,7 @@
 		<property name="sessionTransacted" value="true"/>
 	</bean>
 
-	<bean id="messageSender" class="test.activemq.camel.MessageSender" init-method="init">
+	<bean id="messageSender" class="test.activemq.camel.MessageSender">
 		<constructor-arg ref="jmsTemplate"/>
 	</bean>
 
