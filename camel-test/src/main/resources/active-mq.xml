@@ -3,7 +3,8 @@
        xmlns:p="http://www.springframework.org/schema/p"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:amq="http://activemq.apache.org/schema/core"
-       xmlns:camel="http://camel.apache.org/schema/spring"
+       xmlns:camel="http://camel.apache.org/schema/spring" xmlns:amp="http://activemq.apache.org/schema/core"
+       xmlns:ampq="http://activemq.apache.org/schema/core"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
                            http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd
                            http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
@@ -15,7 +16,7 @@
 		<amq:systemUsage>
 			<amq:systemUsage>
 				<amq:memoryUsage>
-					<amq:memoryUsage limit="64mb"/>
+					<amq:memoryUsage limit="256mb"/>
 				</amq:memoryUsage>
 				<amq:storeUsage>
 					<amq:storeUsage limit="1024mb"/>
@@ -30,9 +31,23 @@
 			<amq:transportConnector uri="vm://jmsBroker"/>
 		</amq:transportConnectors>
 		<amq:persistenceAdapter>
-			<amq:kahaDB directory="activemq-data/kahadb" enableJournalDiskSyncs="true" preallocationStrategy="zeros"/>
+			<amq:kahaDB directory="activemq-data/kahadb" enableJournalDiskSyncs="true" preallocationStrategy="zeros"
+				cleanupInterval="300000" checkpointInterval="50000"
+				journalMaxWriteBatchSize="62k"
+				indexCacheSize="100000" indexWriteBatchSize="100000"/>
 			<!--<amq:levelDB directory="activemq-data/leveldb"/>-->
 		</amq:persistenceAdapter>
+		<amq:destinationPolicy>
+			<amq:policyMap>
+				<amq:policyEntries>
+					<amq:policyEntry queue=">" producerFlowControl="false">
+						<amq:pendingQueuePolicy>
+							<amq:vmQueueCursor/>
+						</amq:pendingQueuePolicy>
+					</amq:policyEntry>
+				</amq:policyEntries>
+			</amq:policyMap>
+		</amq:destinationPolicy>
 		<amq:managementContext>
 			<amq:managementContext createConnector="true" connectorPort="1099"/>
 		</amq:managementContext>
@@ -151,12 +166,15 @@
 	<amq:queue id="testTo5" physicalName="test-to-5"/>
 	<amq:queue id="testTo6" physicalName="test-to-6"/>
 
-	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="tcp://localhost:61616" />-->
+	<amq:connectionFactory id="amqConnectionFactory" brokerURL="tcp://localhost:61616?ioBufferSize=16384" alwaysSessionAsync="false"/>
 	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="tcp://localhost:62626"/>-->
 	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="failover:(tcp://localhost:61616,tcp://localhost:62626)?randomize=false"/>-->
-	<amq:connectionFactory id="amqConnectionFactory" brokerURL="vm://jmsBroker?create=false"/>
+	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="vm://jmsBroker?create=false"/>-->
 
-	<bean id="jmsConnectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory" p:targetConnectionFactory-ref="amqConnectionFactory" p:sessionCacheSize="10" destroy-method="destroy" depends-on="amqConnectionFactory"/>
+	<bean id="jmsConnectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory" destroy-method="destroy" depends-on="amqConnectionFactory">
+		<property name="targetConnectionFactory" ref="amqConnectionFactory"/>
+		<property name="sessionCacheSize" value="10"/>
+	</bean>
 
 	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
 		<property name="connectionFactory" ref="jmsConnectionFactory"/>
