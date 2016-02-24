@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:amq="http://activemq.apache.org/schema/core"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd">
+
+
+	<amq:topic id="test" physicalName="test"/>
+
+	<amq:connectionFactory id="amqConnectionFactory" brokerURL="failover:(tcp://localhost:61616)" alwaysSessionAsync="false"/>
+	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="tcp://localhost:62626"/>-->
+	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="failover:(tcp://localhost:61616,tcp://localhost:62626)?randomize=false"/>-->
+	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="vm://jmsBroker?create=false"/>-->
+
+	<bean id="jmsConnectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory" destroy-method="destroy" depends-on="amqConnectionFactory">
+		<property name="targetConnectionFactory" ref="amqConnectionFactory"/>
+		<property name="sessionCacheSize" value="10"/>
+	</bean>
+
+	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+		<property name="connectionFactory" ref="jmsConnectionFactory"/>
+		<property name="defaultDestination" ref="test"/>
+		<property name="sessionTransacted" value="true"/>
+	</bean>
+
+	<bean id="messageSender" class="test.activemq.durable.MessageSender">
+		<constructor-arg ref="jmsTemplate"/>
+	</bean>
+
+</beans>

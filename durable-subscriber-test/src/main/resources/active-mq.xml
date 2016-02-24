@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:amq="http://activemq.apache.org/schema/core"
+       xmlns:camel="http://camel.apache.org/schema/spring" xmlns:amp="http://activemq.apache.org/schema/core"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd
+                           http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
+
+	<amq:broker brokerId="jmsBroker" brokerName="jmsBroker" persistent="true" start="true" deleteAllMessagesOnStartup="true" useJmx="true">
+		<amq:systemUsage>
+			<amq:systemUsage>
+				<amq:memoryUsage>
+					<amq:memoryUsage limit="256mb"/>
+				</amq:memoryUsage>
+				<amq:storeUsage>
+					<amq:storeUsage limit="1024mb"/>
+				</amq:storeUsage>
+				<amq:tempUsage>
+					<amq:tempUsage limit="128mb"/>
+				</amq:tempUsage>
+			</amq:systemUsage>
+		</amq:systemUsage>
+		<amq:transportConnectors>
+			<amq:transportConnector name="openwire" uri="tcp://0.0.0.0:61616?maximumConnections=1000&amp;wireFormat.maxFrameSize=104857600"/>
+			<amq:transportConnector uri="vm://jmsBroker"/>
+		</amq:transportConnectors>
+		<amq:persistenceAdapter>
+			<amq:kahaDB directory="activemq-data/kahadb" enableJournalDiskSyncs="true" preallocationStrategy="zeros"
+				cleanupInterval="300000" checkpointInterval="50000"
+				journalMaxWriteBatchSize="62k"
+				indexCacheSize="100000" indexWriteBatchSize="100000"/>
+		</amq:persistenceAdapter>
+		<amq:destinationPolicy>
+			<amq:policyMap>
+				<amq:policyEntries>
+					<amq:policyEntry queue=">" advisoryForSlowConsumers="true" advisoryWhenFull="true">
+						<amq:pendingQueuePolicy>
+							<amq:vmQueueCursor/>
+						</amq:pendingQueuePolicy>
+					</amq:policyEntry>
+				</amq:policyEntries>
+			</amq:policyMap>
+		</amq:destinationPolicy>
+		<amq:managementContext>
+			<amq:managementContext createConnector="true" connectorPort="1099"/>
+		</amq:managementContext>
+	</amq:broker>
+
+
+	<bean id="activemq" class="org.apache.activemq.camel.component.ActiveMQComponent">
+		<property name="connectionFactory">
+			<bean class="org.apache.activemq.pool.PooledConnectionFactory" destroy-method="stop">
+				<property name="maxConnections" value="20" />
+				<property name="connectionFactory">
+					<bean class="org.apache.activemq.ActiveMQConnectionFactory">
+						<property name="brokerURL" value="vm://jmsBroker?create=false"/>
+					</bean>
+				</property>
+			</bean>
+		</property>
+	</bean>
+
+	<camel:errorHandler id="loggingErrorHandler" type="LoggingErrorHandler" logName="org.apache.activemq.spring" level="ERROR"/>
+
+	<camel:camelContext id="camelContext" streamCache="true" errorHandlerRef="loggingErrorHandler">
+		<camel:route id="advisoryTopics">
+			<camel:description>Logging Advisory Topics</camel:description>
+			<camel:from uri="activemq:topic:ActiveMQ.Advisory.Connection?mapJmsMessage=false" />
+			<camel:from uri="activemq:topic:ActiveMQ.Advisory.MasterBroker?mapJmsMessage=false" />
+			<camel:from uri="activemq:topic:ActiveMQ.Advisory.Queue?mapJmsMessage=false" />
+			<camel:from uri="activemq:topic:ActiveMQ.Advisory.Topic?mapJmsMessage=false" />
+			<camel:from uri="activemq:topic:ActiveMQ.Advisory.TempQueue?mapJmsMessage=false" />
+			<camel:from uri="activemq:topic:ActiveMQ.Advisory.TempTopic?mapJmsMessage=false" />
+			<camel:from uri="activemq:topic:ActiveMQ.Advisory.Expired.Queue?mapJmsMessage=false" />
+			<camel:from uri="activemq:topic:ActiveMQ.Advisory.Expired.Topic?mapJmsMessage=false" />
+			<camel:from uri="activemq:topic:ActiveMQ.Advisory.NoConsumer.Queue?mapJmsMessage=false" />
+			<camel:from uri="activemq:topic:ActiveMQ.Advisory.NoConsumer.Topic?mapJmsMessage=false" />
+			<camel:from uri="activemq:topic:ActiveMQ.Advisory.SlowConsumer.Topic?mapJmsMessage=false" />
+			<camel:to uri="log:output?showAll=true" />
+		</camel:route>
+	</camel:camelContext>
+
+	<amq:topic id="test" physicalName="test"/>
+
+	<amq:connectionFactory id="amqConnectionFactory" brokerURL="tcp://localhost:61616?ioBufferSize=16384" alwaysSessionAsync="false"/>
+	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="tcp://localhost:62626"/>-->
+	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="failover:(tcp://localhost:61616,tcp://localhost:62626)?randomize=false"/>-->
+	<!--<amq:connectionFactory id="amqConnectionFactory" brokerURL="vm://jmsBroker?create=false"/>-->
+
+	<bean id="jmsConnectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory" destroy-method="destroy" depends-on="amqConnectionFactory">
+		<property name="targetConnectionFactory" ref="amqConnectionFactory"/>
+		<property name="sessionCacheSize" value="10"/>
+	</bean>
+
+	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+		<property name="connectionFactory" ref="jmsConnectionFactory"/>
+		<property name="defaultDestination" ref="test"/>
+		<property name="sessionTransacted" value="true"/>
+	</bean>
+
+	<bean id="messageSender" class="test.activemq.durable.MessageSender">
+		<constructor-arg ref="jmsTemplate"/>
+	</bean>
+
+</beans>
